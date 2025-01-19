@@ -1,8 +1,10 @@
 package rahim.learning.userauthservice.services;
 
+import io.jsonwebtoken.Jwts;
+import io.jsonwebtoken.security.MacAlgorithm;
+import org.antlr.v4.runtime.misc.Pair;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import rahim.learning.userauthservice.exceptions.PasswordMismatchException;
 import rahim.learning.userauthservice.exceptions.UserAlreadyExistsException;
@@ -11,8 +13,8 @@ import rahim.learning.userauthservice.models.Role;
 import rahim.learning.userauthservice.models.User;
 import rahim.learning.userauthservice.repos.UserRepo;
 
-import java.util.Date;
-import java.util.Optional;
+import javax.crypto.SecretKey;
+import java.util.*;
 
 @Service
 public class AuthService implements IAuthService {
@@ -43,7 +45,7 @@ public class AuthService implements IAuthService {
     }
 
     @Override
-    public User login(String username, String password) throws UserNotRegisteredException, PasswordMismatchException {
+    public Pair<User, String> login(String username, String password) throws UserNotRegisteredException, PasswordMismatchException {
         Optional<User> userOptional = userRepo.findByEmail(username);
         if (userOptional.isEmpty()) {
             throw new UserNotRegisteredException("User not found");
@@ -52,6 +54,18 @@ public class AuthService implements IAuthService {
         if (!passwordEncoder.matches(password, storedPassword)) {
             throw new PasswordMismatchException("Password mismatch");
         }
-        return userOptional.get();
+
+        Map<String, Object> payload = new HashMap<>();
+        Long nowInMillis = System.currentTimeMillis();
+        payload.put("iat", nowInMillis);
+        payload.put("exp", nowInMillis + (nowInMillis / 1000));
+        payload.put("userId", userOptional.get().getId());
+        payload.put("iss", "scaler");
+        payload.put("scope", userOptional.get().getRoles());
+
+        MacAlgorithm algorithm = Jwts.SIG.HS256;
+        SecretKey secretKey = algorithm.key().build();
+        String token = Jwts.builder().claims(payload).signWith(secretKey).compact();
+        return new Pair<>(userOptional.get(), token);
     }
 }

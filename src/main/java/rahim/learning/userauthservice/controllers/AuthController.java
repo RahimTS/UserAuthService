@@ -1,9 +1,12 @@
 package rahim.learning.userauthservice.controllers;
 
-import org.apache.coyote.Response;
+import org.antlr.v4.runtime.misc.Pair;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.util.LinkedMultiValueMap;
+import org.springframework.util.MultiValueMap;
 import org.springframework.web.bind.annotation.*;
 import rahim.learning.userauthservice.dtos.LoginRequest;
 import rahim.learning.userauthservice.dtos.SignupRequest;
@@ -34,8 +37,10 @@ public class AuthController {
     @GetMapping("/login")
     public ResponseEntity<UserDto> login(@RequestBody LoginRequest loginRequest) {
         try {
-            User user = authService.login(loginRequest.getEmail(), loginRequest.getPassword());
-            return new ResponseEntity<>(from(user), HttpStatus.OK);
+            Pair<User,String> response = authService.login(loginRequest.getEmail(), loginRequest.getPassword());
+            MultiValueMap<String, String> headers = new LinkedMultiValueMap<>();
+            headers.add(HttpHeaders.SET_COOKIE, response.b);
+            return new ResponseEntity<>(from(response.a), HttpStatus.OK);
         } catch (UserNotRegisteredException e) {
             return new ResponseEntity<>(null, HttpStatus.NOT_FOUND);
         } catch (PasswordMismatchException e) {
