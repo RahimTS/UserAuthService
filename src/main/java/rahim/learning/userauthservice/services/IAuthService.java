@@ -9,4 +9,6 @@ import rahim.learning.userauthservice.models.User;
 public interface IAuthService {
     User signup(String username, String password) throws UserAlreadyExistsException;
     Pair<User, String> login(String username, String password) throws UserNotRegisteredException, PasswordMismatchException;
+    Boolean validateToken(String token, Long userId);
+
 }

@@ -11,7 +11,9 @@ import org.springframework.web.bind.annotation.*;
 import rahim.learning.userauthservice.dtos.LoginRequest;
 import rahim.learning.userauthservice.dtos.SignupRequest;
 import rahim.learning.userauthservice.dtos.UserDto;
+import rahim.learning.userauthservice.dtos.ValidateTokenDto;
 import rahim.learning.userauthservice.exceptions.PasswordMismatchException;
+import rahim.learning.userauthservice.exceptions.UnauthorizedException;
 import rahim.learning.userauthservice.exceptions.UserAlreadyExistsException;
 import rahim.learning.userauthservice.exceptions.UserNotRegisteredException;
 import rahim.learning.userauthservice.models.User;
@@ -46,6 +48,16 @@ public class AuthController {
         } catch (PasswordMismatchException e) {
             return new ResponseEntity<>(null, HttpStatus.UNAUTHORIZED);
         }
+    }
+
+    @PostMapping("/validateToken")
+    public boolean validateToken(@RequestBody ValidateTokenDto validateTokenDto) throws UnauthorizedException {
+        Boolean result = authService.validateToken(validateTokenDto.getToken(), validateTokenDto.getUserId());
+
+        if(!result) {
+            throw new UnauthorizedException("Please Login again");
+        }
+        return true;
     }
 
     UserDto from(User user) {
