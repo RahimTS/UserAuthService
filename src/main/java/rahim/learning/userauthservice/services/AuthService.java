@@ -1,5 +1,7 @@
 package rahim.learning.userauthservice.services;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.JwtParser;
 import io.jsonwebtoken.Jwts;
@@ -7,6 +9,8 @@ import org.antlr.v4.runtime.misc.Pair;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
+import rahim.learning.userauthservice.clients.KafkaProducerClient;
+import rahim.learning.userauthservice.dtos.EmailDto;
 import rahim.learning.userauthservice.exceptions.PasswordMismatchException;
 import rahim.learning.userauthservice.exceptions.UserAlreadyExistsException;
 import rahim.learning.userauthservice.exceptions.UserNotRegisteredException;
@@ -35,6 +39,12 @@ public class AuthService implements IAuthService {
     @Autowired
     private SecretKey secretKey;
 
+    @Autowired
+    private KafkaProducerClient kafkaProducerClient;
+
+    @Autowired
+    private ObjectMapper objectMapper;
+
     @Override
     public User signup(String email, String password) throws UserAlreadyExistsException {
         Optional<User> userOptional = userRepo.findByEmail(email);
@@ -51,6 +61,18 @@ public class AuthService implements IAuthService {
         role.setValue("ROLE_USER");
 
         userRepo.save(user);
+
+        try {
+            EmailDto dto = new EmailDto();
+            dto.setTo(email);
+            dto.setSubject("User Registration");
+            dto.setFrom("rahimatme@gmail.com");
+            dto.setBody("Hello World!");
+            kafkaProducerClient.send("signup", objectMapper.writeValueAsString(dto));
+        } catch (JsonProcessingException e) {
+            throw new RuntimeException(e);
+        }
+
         return user;
     }
 
